@@ -6,7 +6,7 @@
 
     <name>DeepaMehta 4 LDAP</name>
     <groupId>de.deepamehta</groupId>
-    <artifactId>deepamehta-ldap</artifactId>
+    <artifactId>dm49-ldap</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
@@ -32,9 +32,8 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
-                        <Bundle-Activator>
-                            de.deepamehta.ldap.LDAP
-                        </Bundle-Activator>
+                        <Bundle-SymbolicName>de.deepamehta.ldap</Bundle-SymbolicName>
+                        <Bundle-Activator>de.deepamehta.ldap.LDAPPlugin</Bundle-Activator>
                     </instructions>
                 </configuration>
             </plugin>

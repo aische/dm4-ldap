@@ -28,7 +28,7 @@ import java.util.logging.Logger;
 import java.util.Hashtable;
 
 
-public class LDAP extends PluginActivator implements AuthorizationMethod {
+public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
     private Logger logger = Logger.getLogger(getClass().getName());
     private static final String LDAP_SERVER = System.getProperty("dm4.ldap.server", "127.0.0.1");
