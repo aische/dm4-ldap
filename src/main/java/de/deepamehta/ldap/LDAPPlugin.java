@@ -57,6 +57,11 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
         acs.registerAuthorizationMethod("ldap", this);
     }
 
+    @Override
+    public void shutdown() {
+        acs.unregisterAuthorizationMethod("ldap");
+    }
+
     // ******************************************
     // *** AuthorizationMethod implementation ***
     // ******************************************
