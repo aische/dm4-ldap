@@ -131,7 +131,7 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
     }
 
     private static String lookupUserCn (LdapContext ctx, String ldapSearchBase, String uid) throws NamingException {
-        String searchFilter = "(&(objectClass=inetOrgPerson)(uid=" + uid + "))";
+        String searchFilter = "(&(" + LDAP_FILTER + ")(" + LDAP_USER_ATTRIBUTE + "=" + uid + "))";
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
         NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, searchControls);
