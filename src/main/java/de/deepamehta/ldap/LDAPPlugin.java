@@ -53,14 +53,16 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
 
     @Override
-    public void init() {
-        acs.registerAuthorizationMethod("ldap", this);
+    public void serviceArrived(Object service) {
+        ((AccessControlService) service).registerAuthorizationMethod("LDAP", this);
     }
 
     @Override
-    public void shutdown() {
-        acs.unregisterAuthorizationMethod("ldap");
+    public void serviceGone(Object service) {
+        ((AccessControlService) service).unregisterAuthorizationMethod("LDAP");
     }
+
+
 
     // ******************************************
     // *** AuthorizationMethod implementation ***
@@ -68,6 +70,7 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
 
 
+    @Override
     public Topic checkCredentials(Credentials cred) {
         if (checkLdapCredentials(cred.username, cred.plaintextPassword)) {
             logger.info("LDAP login: OK");
@@ -103,12 +106,14 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
             final String server = "ldap://" + LDAP_SERVER + ":" + LDAP_PORT;
             LdapContext ctx = connect(server, LDAP_MANAGER, LDAP_PASSWORD);
             String cn = lookupUserCn(ctx, LDAP_USER_BASE, username);
+            if (cn == null) {
+                return false;
+            }
             LdapContext ctx2 = connect(server, cn, password);
             return ctx2 != null;
         } catch (Exception e) {
-
+            throw new RuntimeException("Checking LDAP credentials failed", e);
         }
-        return false;
     }
 
     private LdapContext connect(String server, String username, String password) throws NamingException {
@@ -131,17 +136,16 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
     }
 
     private static String lookupUserCn (LdapContext ctx, String ldapSearchBase, String uid) throws NamingException {
-        String searchFilter = "(&(" + LDAP_FILTER + ")(" + LDAP_USER_ATTRIBUTE + "=" + uid + "))";
+        String searchFilter = LDAP_FILTER.equals("")
+                            ? "(" + LDAP_USER_ATTRIBUTE + "=" + uid + ")" 
+                            : "(&(" + LDAP_FILTER + ")(" + LDAP_USER_ATTRIBUTE + "=" + uid + "))";
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
         NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, searchControls);
-        SearchResult searchResult = null;
         if(results.hasMoreElements()) {
-            searchResult = (SearchResult) results.nextElement();
-            //make sure there is not another item available, there should be only 1 match
+            SearchResult searchResult = (SearchResult) results.nextElement();
             if(results.hasMoreElements()) {
-                System.err.println("Matched multiple users for the accountName: " + uid);
-                return null; // throw some exception?
+                throw new RuntimeException("Ambiguity in LDAP CN query: Matched multiple users for the accountName");
             }
             return searchResult.getNameInNamespace();
         } else {
