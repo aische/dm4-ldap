@@ -4,6 +4,7 @@ package de.deepamehta.ldap;
 import de.deepamehta.accesscontrol.AuthorizationMethod;
 import de.deepamehta.accesscontrol.AccessControlService;
 
+import de.deepamehta.core.service.accesscontrol.AccessControl;
 import de.deepamehta.core.service.accesscontrol.Credentials;
 import de.deepamehta.core.service.CoreService;
 import de.deepamehta.core.storage.spi.DeepaMehtaTransaction;
@@ -26,6 +27,7 @@ import javax.naming.ldap.Control;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Hashtable;
+import java.util.concurrent.Callable;
 
 
 public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
@@ -78,7 +80,7 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
             if (usernameTopic != null) {
                 return usernameTopic;
             } else {
-                return createUserAccount(cred);
+                return createUsername(cred.username);
             }
         } else {
             return null;
@@ -87,21 +89,21 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
     // ------------------------------------------------------------------------------------------------- Private Methods
 
-    private Topic createUserAccount (Credentials cred) {
+    private Topic createUsername(String username) {
         DeepaMehtaTransaction tx = dm4.beginTx();
         try {
-            Topic usernameTopic = acs.createUserAccount(cred);
+            Topic usernameTopic = acs.createUsername(username);
             tx.success();
             return usernameTopic;
         } catch (Exception e) {
             logger.warning("ROLLBACK! (" + this + ")");
-            throw new RuntimeException("Creating user account failed", e);
+            throw new RuntimeException("Creating username failed", e);
         } finally {
             tx.finish();
         }
     }
 
-    private boolean checkLdapCredentials (String username, String password) {
+    private boolean checkLdapCredentials(String username, String password) {
         try {
             final String server = "ldap://" + LDAP_SERVER + ":" + LDAP_PORT;
             LdapContext ctx = connect(server, LDAP_MANAGER, LDAP_PASSWORD);
@@ -129,7 +131,7 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
         env.put("java.naming.ldap.attributes.binary", "objectSID");
         
         // the following is helpful in debugging errors
-        env.put("com.sun.jndi.ldap.trace.ber", System.err);
+        // env.put("com.sun.jndi.ldap.trace.ber", System.err);
         Control[] arr = new Control[0];
         LdapContext ctx = new InitialLdapContext(env, arr);
         return ctx;
