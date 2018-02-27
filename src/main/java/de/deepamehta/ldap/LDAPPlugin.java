@@ -23,6 +23,9 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.Control;
+import javax.naming.ldap.StartTlsResponse;
+import javax.naming.ldap.StartTlsRequest;
+import javax.net.ssl.SSLSession;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,12 +37,13 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
     private Logger logger = Logger.getLogger(getClass().getName());
     private static final String LDAP_SERVER = System.getProperty("dm4.ldap.server", "127.0.0.1");
-    private static final String LDAP_PORT = System.getProperty("dm4.ldap.port", "389");
+    private static final String LDAP_PORT = System.getProperty("dm4.ldap.port");
     private static final String LDAP_MANAGER = System.getProperty("dm4.ldap.manager", "");
     private static final String LDAP_PASSWORD = System.getProperty("dm4.ldap.password", "");
     private static final String LDAP_USER_BASE = System.getProperty("dm4.ldap.user_base", "");
     private static final String LDAP_USER_ATTRIBUTE = System.getProperty("dm4.ldap.user_attribute", "");
     private static final String LDAP_FILTER = System.getProperty("dm4.ldap.filter", "");
+    private static final String LDAP_PROTOCOL = System.getProperty("dm4.ldap.protocol", "");
 
     // ---------------------------------------------------------------------------------------------- Instance Variables
 
@@ -105,7 +109,9 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
 
     private boolean checkLdapCredentials(String username, String password) {
         try {
-            final String server = "ldap://" + LDAP_SERVER + ":" + LDAP_PORT;
+            final String port = (LDAP_PORT == null) ? (LDAP_PROTOCOL.equals("LDAPS") ? "636" : "389") : LDAP_PORT;
+            final String protocol = LDAP_PROTOCOL.equals("LDAPS") ? "ldaps://" : "ldap://";
+            final String server = protocol + LDAP_SERVER + ":" + port;
             LdapContext ctx = connect(server, LDAP_MANAGER, LDAP_PASSWORD);
             String cn = lookupUserCn(ctx, LDAP_USER_BASE, username);
             if (cn == null) {
@@ -134,6 +140,14 @@ public class LDAPPlugin extends PluginActivator implements AuthorizationMethod {
         // env.put("com.sun.jndi.ldap.trace.ber", System.err);
         Control[] arr = new Control[0];
         LdapContext ctx = new InitialLdapContext(env, arr);
+        if (LDAP_PROTOCOL.equals("StartTLS")) {
+            try {
+                StartTlsResponse tls = (StartTlsResponse) ctx.extendedOperation(new StartTlsRequest());
+                SSLSession session = tls.negotiate();
+            } catch (Exception e) {
+                throw new RuntimeException("Could not establish TLS connection: " + e.toString());
+            }
+        }
         return ctx;
     }
 
